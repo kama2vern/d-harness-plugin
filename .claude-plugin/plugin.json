@@ -1,7 +1,7 @@
 {
   "name": "d-harness",
-  "version": "1.0.0",
-  "description": "TypeScript・Pythonプロジェクト向けミニマムハーネスエンジニアリングプラグイン。Quality Loop・Safety Gate・Completion Gate の3フックでAIエージェントが自律的に高品質なコードを生成できる環境を構築します。",
+  "version": "0.0.1",
+  "description": "ドラゴンガールのためのミニマムハーネスエンジニアリングプラグイン",
   "author": {
     "name": "kama2vern",
     "url": "https://github.com/kama2vern"

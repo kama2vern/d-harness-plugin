@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# stop_test_gate.sh - Completion Gate Hook (Stop)
+# stop_test_gate.sh - 完了ゲートフック (Stop)
 #
-# Triggered when Claude Code is about to stop (complete its response).
-# Runs the project's test suite and forces Claude to continue if tests fail.
+# Claude Code が停止しようとする（応答を完了する）際にトリガーされる。
+# プロジェクトのテストスイートを実行し、テストが失敗した場合は Claude に作業を続けさせる。
 #
-# Stdin: JSON from Claude Code hook event
-# Stdout: JSON with hookSpecificOutput.additionalContext (on failure)
-# Exit 0: allow stop
-# Exit 2: block stop and inject context (Claude will continue working)
+# 標準入力: Claude Code フックイベントの JSON
+# 標準出力: hookSpecificOutput.additionalContext を含む JSON（失敗時）
+# 終了コード 0: 停止を許可
+# 終了コード 2: 停止をブロックしてコンテキストを注入（Claude は作業を継続する）
 
 set -euo pipefail
 
 emit_context() {
   local msg="$1"
   printf '{"hookSpecificOutput":{"additionalContext":%s}}' "$(echo "$msg" | jq -Rs .)"
-  exit 2  # block stop — force Claude to continue
+  exit 2  # 停止をブロック — Claude に作業を継続させる
 }
 
-# ── Detect project type and run tests ────────────────────────────────────────
+# ── プロジェクト種別の検出とテスト実行 ────────────────────────────────────────
 
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
@@ -27,7 +27,7 @@ TEST_FAILED=false
 
 # TypeScript / Node.js
 if [[ -f "$PROJECT_ROOT/package.json" ]]; then
-  # Check if a test script is defined
+  # テストスクリプトが定義されているか確認
   HAS_TEST=$(jq -r '.scripts.test // empty' "$PROJECT_ROOT/package.json" 2>/dev/null || true)
 
   if [[ -n "$HAS_TEST" ]] && [[ "$HAS_TEST" != "echo \"Error: no test specified\" && exit 1" ]]; then
@@ -58,15 +58,15 @@ if [[ "$RAN_TESTS" == "false" ]]; then
   fi
 fi
 
-# No tests found — allow stop
+# テストが見つからなかった場合 — 停止を許可
 if [[ "$RAN_TESTS" == "false" ]]; then
   exit 0
 fi
 
-# Tests passed — allow stop
+# テスト成功 — 停止を許可
 if [[ "$TEST_FAILED" == "false" ]]; then
   exit 0
 fi
 
-# Tests failed — block stop and inject failure details
-emit_context "$(printf 'Tests failed. Please fix the failures before finishing.\n\n%s' "$TEST_OUTPUT")"
+# テスト失敗 — 停止をブロックして失敗の詳細を注入
+emit_context "$(printf 'テストが失敗しました。終了する前に失敗を修正してください。\n\n%s' "$TEST_OUTPUT")"

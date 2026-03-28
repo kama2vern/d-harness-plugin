@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# post_edit_lint.sh - Quality Loop Hook (PostToolUse)
+# post_edit_lint.sh - 品質ループフック (PostToolUse)
 #
-# Triggered after Write/Edit/MultiEdit tool calls.
-# Runs linter on the modified file and injects errors as additionalContext
-# so Claude can fix them immediately.
+# Write/Edit/MultiEdit ツール呼び出し後にトリガーされる。
+# 変更されたファイルに対してリンターを実行し、エラーを additionalContext として注入することで
+# Claude がすぐに修正できるようにする。
 #
-# Stdin: JSON from Claude Code hook event
-# Stdout: JSON with hookSpecificOutput.additionalContext (on error)
-# Exit 0: success (even on lint errors — we report, not block)
+# 標準入力: Claude Code フックイベントの JSON
+# 標準出力: hookSpecificOutput.additionalContext を含む JSON（エラー時）
+# 終了コード 0: 成功（lint エラーがあっても — ブロックせず報告のみ）
 
 set -euo pipefail
 
-# ── Parse stdin ──────────────────────────────────────────────────────────────
+# ── 標準入力のパース ──────────────────────────────────────────────────────────────
 INPUT=$(cat)
 
-# Extract file path from tool input (Write/Edit/MultiEdit all have file_path)
+# ツール入力からファイルパスを取得（Write/Edit/MultiEdit はすべて file_path を持つ）
 FILE_PATH=$(echo "$INPUT" | jq -r '
   .tool_input.file_path //
   .tool_input.path //
@@ -25,17 +25,17 @@ if [[ -z "$FILE_PATH" ]]; then
   exit 0
 fi
 
-# Resolve to absolute path if relative
+# 相対パスの場合は絶対パスに変換
 if [[ "$FILE_PATH" != /* ]]; then
   FILE_PATH="$(pwd)/$FILE_PATH"
 fi
 
-# File must exist
+# ファイルが存在しなければならない
 if [[ ! -f "$FILE_PATH" ]]; then
   exit 0
 fi
 
-# ── Language detection ───────────────────────────────────────────────────────
+# ── 言語検出 ───────────────────────────────────────────────────────
 EXT="${FILE_PATH##*.}"
 
 emit_context() {
@@ -47,20 +47,20 @@ emit_context() {
 # ── TypeScript / JavaScript ──────────────────────────────────────────────────
 if [[ "$EXT" =~ ^(ts|tsx|js|jsx|mts|cts)$ ]]; then
   if ! command -v biome &>/dev/null && ! npx --yes biome --version &>/dev/null 2>&1; then
-    exit 0  # biome not available, skip silently
+    exit 0  # biome が利用不可のため、静かにスキップ
   fi
 
   BIOME_CMD="biome"
   command -v biome &>/dev/null || BIOME_CMD="npx biome"
 
-  # Step 1: Auto-fix
+  # ステップ1: 自動修正
   $BIOME_CMD check --write "$FILE_PATH" &>/dev/null || true
 
-  # Step 2: Check for remaining errors
+  # ステップ2: 残存エラーの確認
   LINT_OUTPUT=$($BIOME_CMD check "$FILE_PATH" 2>&1 || true)
 
   if echo "$LINT_OUTPUT" | grep -qE '(error|warning)'; then
-    # Strip ANSI escape codes for clean output
+    # クリーンな出力のために ANSI エスケープコードを除去
     CLEAN=$(echo "$LINT_OUTPUT" | sed 's/\x1b\[[0-9;]*m//g')
     emit_context "$(printf 'Biome lint issues in %s:\n\n%s\n\nPlease fix the above issues.' "$FILE_PATH" "$CLEAN")"
   fi
@@ -76,14 +76,14 @@ if [[ "$EXT" == "py" ]]; then
   elif command -v uvx &>/dev/null; then
     RUFF_CMD="uvx ruff"
   else
-    exit 0  # ruff not available, skip silently
+    exit 0  # ruff が利用不可のため、静かにスキップ
   fi
 
-  # Step 1: Auto-fix (lint + format)
+  # ステップ1: 自動修正（lint + フォーマット）
   $RUFF_CMD check --fix "$FILE_PATH" &>/dev/null || true
   $RUFF_CMD format "$FILE_PATH" &>/dev/null || true
 
-  # Step 2: Check for remaining errors
+  # ステップ2: 残存エラーの確認
   LINT_OUTPUT=$($RUFF_CMD check "$FILE_PATH" 2>&1 || true)
 
   if [[ -n "$LINT_OUTPUT" ]] && ! echo "$LINT_OUTPUT" | grep -q "^All checks passed"; then
@@ -93,5 +93,5 @@ if [[ "$EXT" == "py" ]]; then
   exit 0
 fi
 
-# Other file types: no-op
+# その他のファイル種別: 何もしない
 exit 0

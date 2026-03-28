@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# pre_safety_gate.sh - Safety Gate Hook (PreToolUse)
+# pre_safety_gate.sh - セーフティゲートフック (PreToolUse)
 #
-# Triggered before Write/Edit/MultiEdit/Bash tool calls.
-# Blocks dangerous operations structurally — no prompt can override this.
+# Write/Edit/MultiEdit/Bash ツール呼び出し前にトリガーされる。
+# 危険な操作を構造的にブロックする — プロンプトによる上書きは不可。
 #
-# Stdin: JSON from Claude Code hook event
-# Stdout: reason message (on block)
-# Exit 0: allow operation
-# Exit 2: block operation (Claude Code treats this as a hard block)
+# 標準入力: Claude Code フックイベントの JSON
+# 標準出力: 理由メッセージ（ブロック時）
+# 終了コード 0: 操作を許可
+# 終了コード 2: 操作をブロック（Claude Code はこれをハードブロックとして扱う）
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ INPUT=$(cat)
 
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)
 
-# ── File-based tools: block sensitive file paths ─────────────────────────────
+# ── ファイル系ツール: センシティブなファイルパスをブロック ─────────────────────────────
 if [[ "$TOOL_NAME" =~ ^(Write|Edit|MultiEdit)$ ]]; then
   FILE_PATH=$(echo "$INPUT" | jq -r '
     .tool_input.file_path //
@@ -27,19 +27,19 @@ if [[ "$TOOL_NAME" =~ ^(Write|Edit|MultiEdit)$ ]]; then
     BASENAME=$(basename "$FILE_PATH")
     LOWER=$(echo "$FILE_PATH" | tr '[:upper:]' '[:lower:]')
 
-    # Block sensitive files
+    # センシティブなファイルをブロック
     BLOCKED=false
     REASON=""
 
     if [[ "$BASENAME" =~ ^\.(env|envrc)$ ]] || [[ "$BASENAME" =~ \.env\. ]]; then
       BLOCKED=true
-      REASON="Editing .env files is blocked by the safety gate. Use .env.example instead."
+      REASON=".env ファイルの編集はセーフティゲートによりブロックされています。代わりに .env.example を使用してください。"
     elif [[ "$LOWER" =~ (secret|credential|private_key|id_rsa|id_ed25519) ]]; then
       BLOCKED=true
-      REASON="Editing files with sensitive names (secret/credential/key) is blocked by the safety gate."
+      REASON="センシティブな名前（secret/credential/key）を持つファイルの編集はセーフティゲートによりブロックされています。"
     elif [[ "$LOWER" =~ \.(pem|key|p12|pfx)$ ]]; then
       BLOCKED=true
-      REASON="Editing certificate/key files is blocked by the safety gate."
+      REASON="証明書/鍵ファイルの編集はセーフティゲートによりブロックされています。"
     fi
 
     if [[ "$BLOCKED" == "true" ]]; then
@@ -49,7 +49,7 @@ if [[ "$TOOL_NAME" =~ ^(Write|Edit|MultiEdit)$ ]]; then
   fi
 fi
 
-# ── Bash tool: block dangerous shell commands ────────────────────────────────
+# ── Bash ツール: 危険なシェルコマンドをブロック ────────────────────────────────
 if [[ "$TOOL_NAME" == "Bash" ]]; then
   COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
 
@@ -57,22 +57,22 @@ if [[ "$TOOL_NAME" == "Bash" ]]; then
     BLOCKED=false
     REASON=""
 
-    # rm -rf on root or home
+    # ルートまたはホームへの rm -rf
     if echo "$COMMAND" | grep -qE 'rm\s+-[a-z]*r[a-z]*f[a-z]*\s+(/\s|/\*|~\s|~/\*)'; then
       BLOCKED=true
-      REASON="Dangerous rm -rf on root/home directory is blocked by the safety gate."
+      REASON="ルート/ホームディレクトリへの危険な rm -rf はセーフティゲートによりブロックされています。"
     # sudo rm -rf
     elif echo "$COMMAND" | grep -qE 'sudo\s+rm\s+-[a-z]*r'; then
       BLOCKED=true
-      REASON="sudo rm -rf is blocked by the safety gate."
-    # chmod 777 on sensitive dirs
+      REASON="sudo rm -rf はセーフティゲートによりブロックされています。"
+    # センシティブなディレクトリへの chmod 777
     elif echo "$COMMAND" | grep -qE 'chmod\s+777\s+/'; then
       BLOCKED=true
-      REASON="chmod 777 on system directories is blocked by the safety gate."
-    # curl/wget piped directly to bash/sh (supply-chain attack vector)
+      REASON="システムディレクトリへの chmod 777 はセーフティゲートによりブロックされています。"
+    # curl/wget を bash/sh に直接パイプ（サプライチェーン攻撃の経路）
     elif echo "$COMMAND" | grep -qE '(curl|wget).+\|\s*(ba)?sh'; then
       BLOCKED=true
-      REASON="Piping curl/wget directly to bash is blocked by the safety gate. Download and inspect scripts first."
+      REASON="curl/wget を bash に直接パイプすることはセーフティゲートによりブロックされています。先にスクリプトをダウンロードして内容を確認してください。"
     fi
 
     if [[ "$BLOCKED" == "true" ]]; then
