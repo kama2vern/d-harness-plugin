@@ -27,18 +27,23 @@ TypeScript のみのプロジェクトなら `ruff`/`pytest` は不要、Python 
 
 ### プラグインとしてインストール（推奨）
 
-```bash
-# ユーザー全体に適用（全プロジェクトで有効）
-claude plugin install https://github.com/kama2vern/d-harness-plugin --scope user
+Claude Code のスラッシュコマンドで操作します。
 
-# 特定プロジェクトにのみ適用
-claude plugin install https://github.com/kama2vern/d-harness-plugin --scope project
+```
+# Step 1: マーケットプレイスとして登録
+/plugin marketplace add kama2vern/d-harness-plugin
 
-# ローカル開発中のプラグインをテスト
-claude plugin install /path/to/d-harness-plugin --scope local
+# Step 2: プラグインをインストール
+/plugin install d-harness@kama2vern-d-harness-plugin
 ```
 
 インストール後、**Claude Code を再起動**してください。
+
+#### ローカルパスから直接読み込む（開発・テスト向け）
+
+```bash
+claude --plugin-dir /path/to/d-harness-plugin
+```
 
 ### 手動インストール（レガシー）
 
