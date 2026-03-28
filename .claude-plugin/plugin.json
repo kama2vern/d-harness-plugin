@@ -8,6 +8,5 @@
   },
   "repository": "https://github.com/kama2vern/d-harness-plugin",
   "license": "MIT",
-  "keywords": ["harness", "lint", "safety", "testing", "typescript", "python", "biome", "ruff"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["harness", "lint", "safety", "testing", "typescript", "python", "biome", "ruff"]
 }
