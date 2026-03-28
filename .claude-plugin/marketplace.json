@@ -1,0 +1,22 @@
+{
+  "name": "d-harness-plugin",
+  "owner": {
+    "name": "kama2vern"
+  },
+  "metadata": {
+    "description": "TypeScript・Pythonプロジェクト向けミニマムハーネスエンジニアリングプラグイン"
+  },
+  "plugins": [
+    {
+      "name": "d-harness",
+      "source": ".",
+      "description": "Quality Loop・Safety Gate・Completion Gate の3フックでAIエージェントが自律的に高品質なコードを生成できる環境を構築します。",
+      "version": "1.0.0",
+      "author": {
+        "name": "kama2vern"
+      },
+      "license": "MIT",
+      "keywords": ["harness", "lint", "safety", "testing", "typescript", "python", "biome", "ruff"]
+    }
+  ]
+}
